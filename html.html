@@ -1,184 +1,278 @@
-<!DOCTYPE html>q
-<html lang="en">
+<!DOCTYPE html>
+<html lang="sk">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pong</title>
+  <meta name="theme-color" content="#080b18" />
+  <title>NEON RUN — 3D hra</title>
   <style>
+    :root { color-scheme: dark; --cyan: #66f7ff; --pink: #ff4fd8; }
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #101522;
-      color: #f3f6ff;
-      font-family: system-ui, sans-serif;
-    }
-
-    .game {
-      width: min(900px, 94vw);
-      text-align: center;
-    }
-
-    h1 {
-      margin: 0 0 12px;
-      letter-spacing: 0.18em;
-    }
-
-    canvas {
-      display: block;
-      width: 100%;
-      background: #080c14;
-      border: 2px solid #48536b;
-      border-radius: 8px;
-      cursor: none;
-    }
-
-    p {
-      color: #aeb8cc;
-      font-size: 0.95rem;
-    }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { display: grid; place-items: center; background: #070914; color: #f5f7ff; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+    .shell { position: relative; width: min(100vw, 1100px); height: min(100vh, 760px); min-height: 420px; overflow: hidden; background: #090c1b; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .hud { position: absolute; z-index: 2; inset: 0 0 auto; display: flex; justify-content: space-between; align-items: flex-start; padding: clamp(16px, 3vw, 30px); pointer-events: none; text-shadow: 0 2px 12px #000; }
+    .brand { font-size: 13px; font-weight: 900; letter-spacing: .24em; color: var(--cyan); }
+    .stats { display: flex; gap: clamp(16px, 4vw, 42px); text-align: right; }
+    .stat-label { display: block; color: #aab4d1; font-size: 10px; letter-spacing: .16em; }
+    .stat-value { display: block; margin-top: 3px; font-size: clamp(18px, 3vw, 26px); font-weight: 850; }
+    .overlay { position: absolute; z-index: 3; inset: 0; display: grid; place-items: center; padding: 22px; background: linear-gradient(180deg, #090c1b33, #070914b8); text-align: center; }
+    .card { width: min(420px, 100%); padding: clamp(24px, 6vw, 42px); border: 1px solid #ffffff24; border-radius: 22px; background: #0b1024e8; box-shadow: 0 20px 80px #0008, 0 0 50px #35ddec12; backdrop-filter: blur(12px); }
+    .eyebrow { color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: .24em; }
+    h1 { margin: 10px 0 12px; font-size: clamp(38px, 9vw, 66px); line-height: .96; letter-spacing: -.06em; }
+    h1 span { color: var(--pink); }
+    .intro { margin: 0 auto 24px; max-width: 310px; color: #b7c0d8; font-size: 14px; line-height: 1.65; }
+    button { border: 0; color: #06121a; font: inherit; font-weight: 900; cursor: pointer; }
+    .start { width: 100%; padding: 15px 20px; border-radius: 12px; background: linear-gradient(100deg, var(--cyan), #8affc5); box-shadow: 0 8px 26px #47e9e94a; letter-spacing: .1em; transition: transform .16s, filter .16s; }
+    .start:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .hint { margin-top: 18px; color: #7985a6; font-size: 11px; line-height: 1.8; }
+    .hidden { display: none; }
+    .touch { position: absolute; z-index: 2; inset: auto 0 18px; display: none; justify-content: space-between; padding: 0 22px; pointer-events: none; }
+    .touch button { width: 58px; height: 58px; border: 1px solid #ffffff45; border-radius: 50%; background: #101933a8; color: white; font-size: 25px; pointer-events: auto; touch-action: manipulation; }
+    @media (pointer: coarse) { .touch { display: flex; } }
+    @media (max-height: 520px) { .card { padding: 18px 26px; } .intro { margin-bottom: 12px; } h1 { font-size: 42px; } .hint { margin-top: 10px; } }
   </style>
 </head>
 <body>
-  <main class="game">
-    <h1>PONG</h1>
-    <canvas id="board" width="900" height="520" aria-label="Pong game"></canvas>
-    <p>Move your mouse or use ↑ / ↓ to control the left paddle.</p>
+  <main class="shell" aria-label="Neon Run 3D hra">
+    <canvas id="game" aria-label="3D neonová bežecká hra"></canvas>
+    <header class="hud">
+      <div class="brand">◆ NEON RUN</div>
+      <div class="stats">
+        <div><span class="stat-label">SKÓRE</span><span class="stat-value" id="score">00000</span></div>
+        <div><span class="stat-label">REKORD</span><span class="stat-value" id="best">00000</span></div>
+        <div><span class="stat-label">KRYŠTÁLY</span><span class="stat-value" id="gems">0</span></div>
+      </div>
+    </header>
+    <section class="overlay" id="overlay">
+      <div class="card">
+        <div class="eyebrow" id="eyebrow">PRIPRAV SA NA ŠTART</div>
+        <h1 id="title">NEON<br><span>RUN</span></h1>
+        <p class="intro" id="intro">Utekaj nekonečným neonovým mestom. Vyhýbaj sa prekážkam a zbieraj kryštály!</p>
+        <button class="start" id="start">ŠTART HRY</button>
+        <div class="hint">POHYB: ← → alebo A / D<br>Na mobile použi šípky</div>
+      </div>
+    </section>
+    <div class="touch" aria-label="Dotykové ovládanie">
+      <button id="left" aria-label="Doľava">←</button><button id="right" aria-label="Doprava">→</button>
+    </div>
   </main>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const gemsEl = document.getElementById('gems');
+  const overlay = document.getElementById('overlay');
+  const startButton = document.getElementById('start');
+  const titleEl = document.getElementById('title');
+  const eyebrowEl = document.getElementById('eyebrow');
+  const introEl = document.getElementById('intro');
+  const lanes = [-2.15, 0, 2.15];
+  let width = 0, height = 0, dpr = 1, horizon = 0, focal = 0;
+  let state = 'ready', playerLane = 1, playerX = 0, distance = 0, score = 0, gems = 0, speed = 28;
+  let objects = [], lastTime = 0, spawnIn = 1.1, best = Number(localStorage.getItem('neonRunBest') || 0);
+  bestEl.textContent = String(best).padStart(5, '0');
 
-  <script>
-    const canvas = document.getElementById("board");
-    const ctx = canvas.getContext("2d");
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = rect.width; height = rect.height;
+    canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    horizon = height * 0.31;
+    focal = Math.min(width * 0.9, height * 1.02);
+  }
+  window.addEventListener('resize', resize); resize();
 
-    const W = canvas.width;
-    const H = canvas.height;
-    const paddle = { width: 14, height: 100, speed: 7 };
-    const player = { x: 28, y: (H - paddle.height) / 2, score: 0 };
-    const computer = { x: W - 28 - paddle.width, y: (H - paddle.height) / 2, score: 0 };
-    const ball = { x: W / 2, y: H / 2, radius: 9, vx: 5, vy: 3 };
-
-    const keys = new Set();
-    let mouseControls = true;
-
-    function resetBall(direction) {
-      ball.x = W / 2;
-      ball.y = H / 2;
-      ball.vx = 5 * direction;
-      ball.vy = (Math.random() * 4 - 2) || 1;
-    }
-
-    function movePlayerTo(y) {
-      player.y = Math.max(0, Math.min(H - paddle.height, y));
-    }
-
-    canvas.addEventListener("mousemove", (event) => {
-      if (!mouseControls) return;
-      const rect = canvas.getBoundingClientRect();
-      const scaleY = H / rect.height;
-      movePlayerTo((event.clientY - rect.top) * scaleY - paddle.height / 2);
-    });
-
-    window.addEventListener("keydown", (event) => {
-      if (["ArrowUp", "ArrowDown"].includes(event.key)) {
-        event.preventDefault();
-        mouseControls = false;
-        keys.add(event.key);
-      }
-    });
-
-    window.addEventListener("keyup", (event) => keys.delete(event.key));
-    canvas.addEventListener("mouseenter", () => { mouseControls = true; });
-
-    function update() {
-      if (keys.has("ArrowUp")) movePlayerTo(player.y - paddle.speed);
-      if (keys.has("ArrowDown")) movePlayerTo(player.y + paddle.speed);
-
-      // Computer paddle follows the ball, with limited movement speed.
-      const computerCenter = computer.y + paddle.height / 2;
-      const target = ball.y;
-      const difference = target - computerCenter;
-      computer.y += Math.max(-5, Math.min(5, difference));
-      computer.y = Math.max(0, Math.min(H - paddle.height, computer.y));
-
-      ball.x += ball.vx;
-      ball.y += ball.vy;
-
-      // Top and bottom wall collisions.
-      if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= H) {
-        ball.vy *= -1;
-        ball.y = Math.max(ball.radius, Math.min(H - ball.radius, ball.y));
-      }
-
-      // Paddle collisions; hit position changes the ball's angle.
-      for (const bat of [player, computer]) {
-        const overlapsY =
-          ball.y + ball.radius >= bat.y &&
-          ball.y - ball.radius <= bat.y + paddle.height;
-        const overlapsX =
-          ball.x + ball.radius >= bat.x &&
-          ball.x - ball.radius <= bat.x + paddle.width;
-
-        if (overlapsX && overlapsY) {
-          const direction = bat === player ? 1 : -1;
-          const hitOffset =
-            (ball.y - (bat.y + paddle.height / 2)) / (paddle.height / 2);
-
-          ball.vx = direction * Math.min(Math.abs(ball.vx) + 0.35, 9);
-          ball.vy = hitOffset * 5;
-          ball.x = direction === 1
-            ? bat.x + paddle.width + ball.radius
-            : bat.x - ball.radius;
+  function project(x, y, z) {
+    const scale = focal / z;
+    return { x: width / 2 + x * scale, y: horizon + (4.4 - y) * scale, scale };
+  }
+  function polygon(points, fill, stroke, lineWidth = 1) {
+    ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
+  }
+  function drawBackground(time) {
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+    sky.addColorStop(0, '#080b1b'); sky.addColorStop(.58, '#17143b'); sky.addColorStop(1, '#080b18');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
+    const glow = ctx.createRadialGradient(width / 2, horizon + 16, 2, width / 2, horizon + 16, width * .54);
+    glow.addColorStop(0, '#ff4fd826'); glow.addColorStop(1, '#ff4fd800');
+    ctx.fillStyle = glow; ctx.fillRect(0, horizon - 90, width, height - horizon + 90);
+    // Distant skyline silhouettes
+    const unit = Math.max(24, width / 28);
+    for (let i = 0; i < Math.ceil(width / unit) + 1; i++) {
+      const x = i * unit - (unit * .5);
+      const seed = (i * 47 + 13) % 83;
+      const bh = 22 + seed * .92;
+      ctx.fillStyle = i % 3 === 0 ? '#11152d' : '#0c1228';
+      ctx.fillRect(x, horizon - bh, unit * .82, bh);
+      for (let wy = horizon - bh + 10; wy < horizon - 6; wy += 13) {
+        for (let wx = x + 7; wx < x + unit * .72; wx += 12) {
+          if (((Math.floor(wx) + Math.floor(wy) + i) % 4) === 0) {
+            ctx.fillStyle = i % 2 ? '#51ebff55' : '#ff58df55'; ctx.fillRect(wx, wy, 3, 4);
+          }
         }
       }
-
-      // Score when the ball passes a paddle.
-      if (ball.x + ball.radius < 0) {
-        computer.score++;
-        resetBall(1);
-      } else if (ball.x - ball.radius > W) {
-        player.score++;
-        resetBall(-1);
+    }
+    // Horizon beam
+    ctx.fillStyle = '#ff56e8'; ctx.shadowColor = '#ff56e8'; ctx.shadowBlur = 12;
+    ctx.fillRect(0, horizon, width, 1); ctx.shadowBlur = 0;
+    drawRoad(time);
+  }
+  function drawRoad(time) {
+    const near = 8, far = 125, left = -5.1, right = 5.1;
+    const a = project(left, 0, far), b = project(right, 0, far);
+    const c = project(right, 0, near), d = project(left, 0, near);
+    polygon([a, b, c, d], '#10172c');
+    // Road edge neon rails
+    for (const x of [left, right]) {
+      const p1 = project(x, 0, far), p2 = project(x, 0, near);
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.strokeStyle = '#51efff'; ctx.lineWidth = 2; ctx.shadowColor = '#51efff'; ctx.shadowBlur = 12; ctx.stroke(); ctx.shadowBlur = 0;
+    }
+    // Perspective lane markers
+    const offset = distance % 12;
+    for (let z = 8 + offset; z < far; z += 12) {
+      const z2 = Math.min(z + 5.5, far);
+      for (const x of [-.72, .72]) {
+        const p1 = project(x, 0, z), p2 = project(x, 0, z2);
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = `rgba(102,247,255,${Math.max(.12, 1 - z / 115)})`;
+        ctx.lineWidth = Math.max(1, focal / z * .035); ctx.stroke();
       }
     }
-
-    function draw() {
-      ctx.clearRect(0, 0, W, H);
-
-      // Dashed center line and scoreboard.
-      ctx.strokeStyle = "#354057";
-      ctx.setLineDash([10, 12]);
-      ctx.beginPath();
-      ctx.moveTo(W / 2, 0);
-      ctx.lineTo(W / 2, H);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = "#f3f6ff";
-      ctx.font = "bold 42px system-ui";
-      ctx.textAlign = "center";
-      ctx.fillText(player.score, W / 2 - 70, 58);
-      ctx.fillText(computer.score, W / 2 + 70, 58);
-
-      // Paddles and ball.
-      ctx.fillStyle = "#f3f6ff";
-      ctx.fillRect(player.x, player.y, paddle.width, paddle.height);
-      ctx.fillRect(computer.x, computer.y, paddle.width, paddle.height);
-
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fill();
+    // Subtle road grid crossbars
+    for (let z = 12 + offset; z < far; z += 20) {
+      const p1 = project(left, 0, z), p2 = project(right, 0, z);
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.strokeStyle = `rgba(94,116,180,${Math.max(.03, .17 - z / 900)})`; ctx.lineWidth = 1; ctx.stroke();
     }
-
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
+  }
+  function drawBlock(obj) {
+    const z = obj.z, x = lanes[obj.lane], w = .72, depth = 1.7, h = 1.45;
+    const p = project(x, 0, z), q = project(x, h, z);
+    const half = w * p.scale / 2, topHalf = half * .82;
+    const heightPx = p.y - q.y, depthPx = Math.max(2, depth * p.scale * .16);
+    // Ground shadow
+    ctx.fillStyle = '#0008'; ctx.beginPath(); ctx.ellipse(p.x, p.y, half * 1.35, Math.max(2, half * .38), 0, 0, Math.PI * 2); ctx.fill();
+    // 3D faces
+    const top = [{x:p.x-topHalf,y:q.y},{x:p.x+topHalf,y:q.y},{x:p.x+half,y:q.y+depthPx},{x:p.x-half,y:q.y+depthPx}];
+    const side = [{x:p.x+half,y:q.y+depthPx},{x:p.x+half,y:p.y+depthPx},{x:p.x+half*1.12,y:p.y},{x:p.x+half,y:p.y}];
+    polygon(top, '#ff85ed', '#ffd6fb', 1);
+    polygon(side, '#8a218e', '#ff4fd8', 1);
+    const front = [{x:p.x-half,y:q.y+depthPx},{x:p.x+half,y:q.y+depthPx},{x:p.x+half,y:p.y},{x:p.x-half,y:p.y}];
+    polygon(front, '#e637bd', '#ff9ae9', Math.max(1, p.scale * .018));
+    ctx.save(); ctx.globalAlpha = Math.min(1, p.scale / 8); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(p.x-half*.45, q.y+heightPx*.32); ctx.lineTo(p.x+half*.45, q.y+heightPx*.32); ctx.stroke(); ctx.restore();
+  }
+  function drawGem(obj, time) {
+    const p = project(lanes[obj.lane], 1.05 + Math.sin(time * .005 + obj.z) * .12, obj.z);
+    const r = Math.max(2.5, p.scale * .19), bob = Math.sin(time * .007 + obj.z) * r * .18;
+    ctx.save(); ctx.translate(p.x, p.y + bob); ctx.rotate(time * .0018 + obj.z);
+    ctx.shadowColor = '#69fbff'; ctx.shadowBlur = r * 2.3;
+    polygon([{x:0,y:-r*1.35},{x:r*.72,y:0},{x:0,y:r*1.35},{x:-r*.72,y:0}], '#71fbff', '#e3ffff', Math.max(1,r*.08));
+    ctx.restore();
+  }
+  function drawPlayer(time) {
+    const ground = project(playerX, 0, 9.5), bob = state === 'playing' ? Math.sin(time * .014) * 2.5 : 0;
+    const scale = ground.scale, bodyW = Math.max(16, scale * .58), bodyH = Math.max(27, scale * .92);
+    ctx.fillStyle = '#0009'; ctx.beginPath(); ctx.ellipse(ground.x, ground.y + 2, bodyW * .8, bodyW * .23, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(ground.x, ground.y + bob);
+    // Running neon avatar: legs, torso, head, and glow
+    ctx.shadowColor = '#5cf7ff'; ctx.shadowBlur = 18;
+    ctx.strokeStyle = '#72faff'; ctx.lineWidth = Math.max(3, bodyW * .13); ctx.lineCap = 'round';
+    const stride = Math.sin(time * .018) * bodyW * .25;
+    ctx.beginPath(); ctx.moveTo(-bodyW*.12, -bodyH*.37); ctx.lineTo(-bodyW*.2 + stride, -bodyH*.04); ctx.lineTo(-bodyW*.38 - stride, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bodyW*.12, -bodyH*.37); ctx.lineTo(bodyW*.2 - stride, -bodyH*.04); ctx.lineTo(bodyW*.38 + stride, 0); ctx.stroke();
+    ctx.fillStyle = '#49dfe9';
+    polygon([{x:-bodyW*.28,y:-bodyH*.83},{x:bodyW*.28,y:-bodyH*.83},{x:bodyW*.2,y:-bodyH*.35},{x:-bodyW*.2,y:-bodyH*.35}], '#53e7ee', '#bbffff', 1);
+    ctx.fillStyle = '#ffd8f8'; ctx.beginPath(); ctx.arc(0, -bodyH*.98, bodyW*.19, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0; ctx.restore();
+  }
+  function draw(time) {
+    drawBackground(time);
+    const sorted = [...objects].sort((a,b) => b.z - a.z);
+    for (const obj of sorted) obj.type === 'block' ? drawBlock(obj) : drawGem(obj, time);
+    drawPlayer(time);
+    // Speed streaks add a sense of motion as the run gets faster.
+    if (state === 'playing' && speed > 37) {
+      ctx.globalAlpha = Math.min(.25, (speed - 37) / 80);
+      for (let i=0;i<8;i++) { const x=(i*137+time*.12)%width, y=horizon+((i*71+time*.22)%(height-horizon)); ctx.fillStyle='#8ffaff'; ctx.fillRect(x,y,1,12+speed*.25); }
+      ctx.globalAlpha = 1;
     }
+  }
+  function spawn() {
+    const lane = Math.floor(Math.random() * 3);
+    objects.push({ type: 'block', lane, z: 92 });
+    if (Math.random() < .78) {
+      const gemLane = Math.random() < .55 ? lane : Math.floor(Math.random() * 3);
+      for (let i=0;i<3;i++) objects.push({ type: 'gem', lane: gemLane, z: 78 - i*5 });
+    }
+  }
+  function moveLane(direction) { if (state === 'playing') playerLane = Math.max(0, Math.min(2, playerLane + direction)); }
+  function endGame() {
+    state = 'over';
+    best = Math.max(best, score); localStorage.setItem('neonRunBest', String(best));
+    bestEl.textContent = String(best).padStart(5, '0');
+    eyebrowEl.textContent = 'KONIEC BEHU'; titleEl.innerHTML = `SKÓRE<br><span>${String(score).padStart(5,'0')}</span>`;
+    introEl.textContent = `Získal/a si ${gems} kryštálov. Skús prekonať svoj rekord!`;
+    startButton.textContent = 'HRAŤ ZNOVA'; overlay.classList.remove('hidden');
+  }
+  function startGame() {
+    state = 'playing'; playerLane = 1; playerX = lanes[1]; distance = 0; score = 0; gems = 0; speed = 28; spawnIn = .8; objects = [];
+    scoreEl.textContent = '00000'; gemsEl.textContent = '0';
+    eyebrowEl.textContent = 'PRIPRAV SA NA ŠTART'; titleEl.innerHTML = 'NEON<br><span>RUN</span>';
+    introEl.textContent = 'Utekaj nekonečným neonovým mestom. Vyhýbaj sa prekážkam a zbieraj kryštály!';
+    startButton.textContent = 'ŠTART HRY'; overlay.classList.add('hidden'); lastTime = performance.now();
+  }
+  startButton.addEventListener('click', startGame);
+  window.addEventListener('keydown', e => {
+    if (['ArrowLeft','ArrowRight','a','A','d','D',' '].includes(e.key)) e.preventDefault();
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') moveLane(-1);
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') moveLane(1);
+    if ((e.key === ' ' || e.key === 'Enter') && state !== 'playing') startGame();
+  });
+  document.getElementById('left').addEventListener('pointerdown', () => moveLane(-1));
+  document.getElementById('right').addEventListener('pointerdown', () => moveLane(1));
+  let touchStartX = null;
+  canvas.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+  canvas.addEventListener('touchend', e => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 24) moveLane(dx > 0 ? 1 : -1);
+    touchStartX = null;
+  }, {passive:true});
 
-    gameLoop();
-  </script>
+  function loop(now) {
+    const dt = Math.min((now - (lastTime || now)) / 1000, .04); lastTime = now;
+    if (state === 'playing') {
+      speed = Math.min(53, speed + dt * .38);
+      distance += speed * dt;
+      score = Math.floor(distance * 3) + gems * 25;
+      scoreEl.textContent = String(score).padStart(5, '0');
+      playerX += (lanes[playerLane] - playerX) * Math.min(1, dt * 13);
+      spawnIn -= dt;
+      if (spawnIn <= 0) { spawn(); spawnIn = Math.max(.68, 1.25 - (speed - 28) * .018) + Math.random() * .28; }
+      for (const obj of objects) obj.z -= speed * dt;
+      for (const obj of objects) {
+        if (obj.z < 10 && obj.z > 7 && obj.lane === playerLane) {
+          if (obj.type === 'block') { endGame(); break; }
+          if (!obj.collected) { obj.collected = true; gems++; gemsEl.textContent = String(gems); }
+        }
+      }
+      objects = objects.filter(o => o.z > 5 && !o.collected);
+    }
+    draw(now); requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
